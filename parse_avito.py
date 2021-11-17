@@ -2,62 +2,44 @@ import requests
 from bs4 import BeautifulSoup
 import csv
 
-print('Введите название товара')
-product = input()
-
-HOST = 'https://www.avito.ru/'
-page_part = 'p='
-query_part = '&q='
-URL = 'https://www.avito.ru/rossiya?'
+URL = 'https://kolesa.kz/cars/avtomobili-s-probegom/?page='
 HEADERS = {
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
 }
-FILE = 'avito.csv'
+FILE = 'kolesa_kz.csv'
 
 def get_html(url, params=None):
-    response = requests.get(URL + page_part + str(1) + query_part + product, headers=HEADERS, params=params)
+    response = requests.get(URL + str(1), headers=HEADERS, params=params)
     return response
 
 
 def get_content(html):
     soup = BeautifulSoup(html, 'html.parser')
-    items = soup.find_all('div', class_='iva-item-content-UnQQ4')
+    items = soup.find_all('div', class_='a-info-side col-right-list')
     total = []
     for item in items:
         total.append({
-            'title': item.find('div', class_='iva-item-titleStep-_CxvN').get_text(strip=True),
-            'link': HOST + item.find('div', class_='iva-item-titleStep-_CxvN').find('a').get('href'),
-            'price': item.find('span', class_='price-text-E1Y7h text-text-LurtD text-size-s-BxGpL').get_text().replace('\u20bd','')
+            'title': item.find('span', class_='a-el-info-title').get_text(strip=True),
+            'description': item.find('div', class_='a-search-description').get_text(strip=True)[:4]
         })
     return(total)
-
-
-def get_pages_count(html):
-    soup = BeautifulSoup(html, 'html.parser')
-    try:
-        pages = soup.find('div', class_='pagination-pages').find_all('a', class_='pagination-page')[-1].get('href')
-        total_pages = pages.split('=')[1].split('&')[0]
-        return int(total_pages)
-    except:
-        return 1
 
 
 def save_doc(total, path):
     with open(path, 'w', newline='') as f:
         writer = csv.writer(f, delimiter=';')
-        writer.writerow(['Название', 'Цена', 'Ссылка'])
+        writer.writerow(['Название', 'Год'])
         for item in total:
-            writer.writerow([item['title'], item['link'], item['price']])
+            writer.writerow([item['title'], item['description']])
 
 
 def parse():
-    html = get_html(URL + page_part + str(1) + query_part + product)
+    html = get_html(URL + str(1))
     if html.status_code == 200:
-        pages_count = get_pages_count(html.text)
         total = []
-        for page in range(1, pages_count+1):
-            print(f'Парсинг{page} из {pages_count}...')
-            url_gen = URL + page_part + str(page) + query_part + product
+        for page in range(1, 1000):
+            print(f'Парсинг{page} из 1000')
+            url_gen = URL + str(page)
             html = get_html(url_gen, params=None)
             total.extend(get_content(html.text))
         save_doc(total, FILE)
@@ -66,6 +48,3 @@ def parse():
 
 
 parse()
-
-
-
